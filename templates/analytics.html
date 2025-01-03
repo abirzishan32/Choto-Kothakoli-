@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .analytics-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            font-size: 2em;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .time-filter {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-btn {
+            padding: 8px 15px;
+            border: 1px solid #4CAF50;
+            background: white;
+            color: #4CAF50;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .time-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .chart-options {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chart-type-btn {
+            padding: 5px 10px;
+            border: none;
+            background: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .chart-type-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="analytics-container">
+        <div class="dashboard-header">
+            <h1>Analytics Dashboard</h1>
+            <div class="time-filter">
+                <button class="time-btn active" data-days="7">Week</button>
+                <button class="time-btn" data-days="30">Month</button>
+                <button class="time-btn" data-days="90">3 Months</button>
+                <button class="time-btn" data-days="365">Year</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-language"></i>
+                </div>
+                <h3>Total Words Translated</h3>
+                <div class="stat-number" data-stat="words">{{ data.total_words }}</div>
+                <div class="tooltip">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltiptext">Total number of words translated from Banglish to Bengali</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3>Documents Created</h3>
+                <div class="stat-number" data-stat="documents">{{ data.total_documents }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>User Contributions</h3>
+                <div class="stat-number">{{ data.contributions }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Text Length</h3>
+                <div class="stat-number" data-stat="avg_length">{{ data.avg_length }}</div>
+            </div>
+        </div>
+        
+        <div class="chart-grid">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>Daily Translations</h3>
+                    <div class="chart-options">
+                        <button class="chart-type-btn active" data-type="line">Line</button>
+                        <button class="chart-type-btn" data-type="bar">Bar</button>
+                    </div>
+                </div>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Font Usage</h3>
+                <canvas id="fontChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Most Common Words</h3>
+                <canvas id="wordsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format dates for charts
+        const formatDates = (dates) => {
+            return dates.map(date => {
+                const [year, month, day] = date.split('-');
+                return `${day}/${month}`;
+            });
+        };
+        
+        // Daily Translations Chart
+        const dailyChart = new Chart(document.getElementById('dailyChart'), {
+            type: 'line',
+            data: {
+                labels: formatDates({{ data.daily_stats.keys()|list|tojson }}),
+                datasets: [{
+                    label: 'Translations',
+                    data: {{ data.daily_stats.values()|list|tojson }},
+                    borderColor: '#4CAF50',
+                    tension: 0.1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Font Usage Chart
+        const fontChart = new Chart(document.getElementById('fontChart'), {
+            type: 'pie',
+            data: {
+                labels: {{ data.font_usage.keys()|list|tojson }},
+                datasets: [{
+                    data: {{ data.font_usage.values()|list|tojson }},
+                    backgroundColor: [
+                        '#4CAF50', '#2196F3', '#FFC107', '#9C27B0'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        
+        // Common Words Chart
+        const wordsChart = new Chart(document.getElementById('wordsChart'), {
+            type: 'bar',
+            data: {
+                labels: {{ data.common_words.keys()|list|tojson }},
+                datasets: [{
+                    label: 'Usage Count',
+                    data: {{ data.common_words.values()|list|tojson }},
+                    backgroundColor: '#4CAF50'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Time filter functionality
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const days = parseInt(btn.dataset.days);
+                fetch(`/analytics/data?days=${days}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update daily chart
+                        dailyChart.data.labels = formatDates(data.daily_stats.keys);
+                        dailyChart.data.datasets[0].data = data.daily_stats.values;
+                        dailyChart.update();
+                        
+                        // Update other stats
+                        document.querySelector('[data-stat="words"]').textContent = data.total_words;
+                        document.querySelector('[data-stat="documents"]').textContent = data.total_documents;
+                        document.querySelector('[data-stat="avg_length"]').textContent = data.avg_length;
+                    });
+            });
+        });
+    </script>
+</body>
+</html> 

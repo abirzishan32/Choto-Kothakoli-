@@ -74,4 +74,212 @@ button:hover {
 .meta-container p {
     color: #666;
     margin-bottom: 15px;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 5px;
+    background-color: #ddd;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab-btn.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.contribution-form {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.feedback-box {
+    margin-top: 20px;
+}
+
+.feedback-box textarea {
+    height: 100px;
+}
+
+.nav-links {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.nav-links a {
+    color: #4CAF50;
+    text-decoration: none;
+    padding: 5px 10px;
+}
+
+.nav-links a:hover {
+    text-decoration: underline;
+}
+
+.input-container {
+    position: relative;
+    width: 100%;
+}
+
+.voice-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.voice-btn:hover {
+    background-color: #45a049;
+    transform: scale(1.1);
+}
+
+.voice-btn.listening {
+    background-color: #f44336;
+    animation: pulse 1.5s infinite, glow 1.5s infinite alternate;
+}
+
+.voice-status {
+    position: absolute;
+    right: 60px;
+    top: 20px;
+    font-size: 14px;
+    color: #666;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 8px;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes glow {
+    from {
+        box-shadow: 0 0 5px #f44336;
+    }
+    to {
+        box-shadow: 0 0 20px #f44336;
+    }
+}
+
+textarea {
+    padding-right: 60px;
+}
+
+.font-selection {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.font-selection select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.font-selection select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 5px rgba(74, 175, 80, 0.2);
+}
+
+.corrections-panel {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+}
+
+.corrections-panel h4 {
+    color: #2c3e50;
+    margin: 10px 0;
+}
+
+.corrections-panel ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.corrections-panel li {
+    margin: 5px 0;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.correction-original {
+    color: #e74c3c;
+    text-decoration: line-through;
+}
+
+.correction-corrected {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.correction-rule {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+.suggestion-message {
+    color: #2980b9;
+    font-style: italic;
+}
+
+#exportPdfBtn {
+    margin-top: 20px;
+    background-color: #2196F3;
+}
+
+#exportPdfBtn:hover {
+    background-color: #1976D2;
+}
+
+#convertBtn, #exportPdfBtn {
+    margin-bottom: 20px;
 } 

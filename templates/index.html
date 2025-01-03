@@ -5,36 +5,155 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banglish to Bengali Converter</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <h1>Banglish to Bengali Converter</h1>
-        <div class="editor-container">
-            <div class="editor-box">
-                <h3>Banglish Text</h3>
-                <textarea id="banglishText" placeholder="Write your Banglish text here..."></textarea>
+        <div class="nav-links">
+            <a href="/view-contributions">View All Contributions</a>
+            <a href="/analytics">View Analytics</a>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="convert">Convert</button>
+            <button class="tab-btn" data-tab="contribute">Contribute</button>
+        </div>
+        
+        <div id="convert-tab" class="tab-content active">
+            <div class="editor-container">
+                <div class="editor-box">
+                    <h3>Banglish Text</h3>
+                    <div class="input-container">
+                        <textarea id="banglishText" placeholder="Write your Banglish text here..."></textarea>
+                        <button class="voice-btn" id="banglishVoiceBtn" title="Click to speak">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <div class="voice-status" id="banglishVoiceStatus"></div>
+                    </div>
+                    <div class="corrections-panel" style="display: none;">
+                        <h4>Corrections Made:</h4>
+                        <ul id="correctionsList"></ul>
+                        <h4>Suggestions:</h4>
+                        <ul id="suggestionsList"></ul>
+                    </div>
+                </div>
+                <div class="editor-box">
+                    <h3>Bengali Text</h3>
+                    <div class="input-container">
+                        <textarea id="bengaliText" readonly placeholder="Bengali translation will appear here..."></textarea>
+                        <button class="voice-btn" id="bengaliVoiceBtn" title="Click to speak in Bengali">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <div class="voice-status" id="bengaliVoiceStatus"></div>
+                    </div>
+                </div>
             </div>
-            <div class="editor-box">
-                <h3>Bengali Text</h3>
-                <textarea id="bengaliText" readonly placeholder="Bengali translation will appear here..."></textarea>
+            <div class="meta-container" style="display: none;">
+                <h3>Generated Title</h3>
+                <p id="generatedTitle"></p>
+                <h3>Generated Caption</h3>
+                <p id="generatedCaption"></p>
+                <div class="font-selection">
+                    <h3>Select PDF Font</h3>
+                    <select id="pdfFont">
+                        {% for key, font in fonts.items() %}
+                        <option value="{{ key }}">{{ font.display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button id="convertBtn">Convert to Bengali</button>
+            <button id="exportPdfBtn">Export as PDF</button>
+        </div>
+        
+        <div id="contribute-tab" class="tab-content">
+            <div class="contribution-form">
+                <h2>Contribute to Improve Translations</h2>
+                <div class="editor-container">
+                    <div class="editor-box">
+                        <h3>Banglish Text</h3>
+                        <textarea id="contributeBanglish" placeholder="Enter Banglish text..."></textarea>
+                    </div>
+                    <div class="editor-box">
+                        <h3>Correct Bengali Translation</h3>
+                        <textarea id="contributeBengali" placeholder="Enter the correct Bengali translation..."></textarea>
+                    </div>
+                </div>
+                <div class="feedback-box">
+                    <h3>Additional Feedback (Optional)</h3>
+                    <textarea id="contributeFeedback" placeholder="Any additional comments or context..."></textarea>
+                </div>
+                <button id="contributeBtn">Submit Contribution</button>
             </div>
         </div>
-        <div class="meta-container" style="display: none;">
-            <h3>Generated Title</h3>
-            <p id="generatedTitle"></p>
-            <h3>Generated Caption</h3>
-            <p id="generatedCaption"></p>
-        </div>
-        <button id="convertBtn">Convert to Bengali</button>
-        <button id="exportPdfBtn" style="display: none;">Export as PDF</button>
     </div>
 
     <script>
-        document.getElementById('convertBtn').addEventListener('click', async () => {
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                button.classList.add('active');
+                document.getElementById(`${button.dataset.tab}-tab`).classList.add('active');
+                
+                // Reset UI when switching tabs
+                if (button.dataset.tab !== 'convert') {
+                    document.getElementById('banglishText').value = '';
+                    document.getElementById('bengaliText').value = '';
+                    metaContainer.style.display = 'none';
+                    exportPdfBtn.style.display = 'none';
+                }
+            });
+        });
+        
+        // Contribution submission
+        document.getElementById('contributeBtn').addEventListener('click', async () => {
+            const banglish = document.getElementById('contributeBanglish').value;
+            const bengali = document.getElementById('contributeBengali').value;
+            const feedback = document.getElementById('contributeFeedback').value;
+            
+            try {
+                const response = await fetch('/contribute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        banglish,
+                        bengali,
+                        feedback
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    // Clear form
+                    document.getElementById('contributeBanglish').value = '';
+                    document.getElementById('contributeBengali').value = '';
+                    document.getElementById('contributeFeedback').value = '';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Initialize buttons
+        const convertBtn = document.getElementById('convertBtn');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const metaContainer = document.querySelector('.meta-container');
+        
+        // Initially hide export button and meta container
+        exportPdfBtn.style.display = 'none';
+        metaContainer.style.display = 'none';
+        
+        convertBtn.addEventListener('click', async () => {
             const banglishText = document.getElementById('banglishText').value;
-            const bengaliOutput = document.getElementById('bengaliText');
-            const metaContainer = document.querySelector('.meta-container');
-            const exportPdfBtn = document.getElementById('exportPdfBtn');
             
             try {
                 const response = await fetch('/convert', {
@@ -46,13 +165,18 @@
                 });
                 
                 const data = await response.json();
+                const bengaliOutput = document.getElementById('bengaliText');
                 
                 if (data.success) {
                     bengaliOutput.value = data.bengali_text;
                     document.getElementById('generatedTitle').textContent = data.title;
                     document.getElementById('generatedCaption').textContent = data.caption;
+                    
+                    // Show meta container and export button
                     metaContainer.style.display = 'block';
                     exportPdfBtn.style.display = 'block';
+                    // Scroll to make the export button visible
+                    exportPdfBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } else {
                     alert('Error: ' + data.error);
                 }
@@ -65,6 +189,7 @@
             const bengaliText = document.getElementById('bengaliText').value;
             const title = document.getElementById('generatedTitle').textContent;
             const caption = document.getElementById('generatedCaption').textContent;
+            const selectedFont = document.getElementById('pdfFont').value;
             
             try {
                 const response = await fetch('/export-pdf', {
@@ -75,7 +200,8 @@
                     body: JSON.stringify({ 
                         text: bengaliText,
                         title: title,
-                        caption: caption
+                        caption: caption,
+                        font: selectedFont
                     })
                 });
                 
@@ -96,6 +222,80 @@
                 alert('Error: ' + error.message);
             }
         });
+
+        function setupVoiceRecognition(buttonId, textareaId, statusId, language) {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            let isListening = false;
+            const button = document.getElementById(buttonId);
+            const textarea = document.getElementById(textareaId);
+            const status = document.getElementById(statusId);
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = language;  // 'en-US' for English, 'bn-BD' for Bengali
+            
+            button.addEventListener('click', () => {
+                if (!isListening) {
+                    // Start listening
+                    recognition.start();
+                    isListening = true;
+                    button.classList.add('listening');
+                    status.textContent = 'Listening...';
+                } else {
+                    // Stop listening
+                    recognition.stop();
+                    isListening = false;
+                    button.classList.remove('listening');
+                    status.textContent = '';
+                }
+            });
+            
+            recognition.onresult = (event) => {
+                const result = event.results[event.results.length - 1];
+                const transcript = result[0].transcript;
+                
+                if (result.isFinal) {
+                    if (textarea.value === '') {
+                        textarea.value = transcript;
+                    } else {
+                        textarea.value += ' ' + transcript;
+                    }
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                status.textContent = `Error: ${event.error}`;
+                button.classList.remove('listening');
+                isListening = false;
+            };
+            
+            recognition.onend = () => {
+                button.classList.remove('listening');
+                status.textContent = '';
+                isListening = false;
+            };
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isListening) {
+                    recognition.stop();
+                    isListening = false;
+                    button.classList.remove('listening');
+                    status.textContent = '';
+                }
+            });
+        }
+        
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                btn.style.display = 'none';
+            });
+            console.warn('Speech recognition not supported in this browser');
+        }
+        
+        // Initialize voice recognition for both inputs
+        setupVoiceRecognition('banglishVoiceBtn', 'banglishText', 'banglishVoiceStatus', 'en-US');
+        setupVoiceRecognition('bengaliVoiceBtn', 'bengaliText', 'bengaliVoiceStatus', 'bn-BD');
     </script>
 </body>
 </html> 
