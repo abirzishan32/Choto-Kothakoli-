@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banglish to Bengali Converter</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Banglish to Bengali Converter</h1>
+        <div class="editor-container">
+            <div class="editor-box">
+                <h3>Banglish Text</h3>
+                <textarea id="banglishText" placeholder="Write your Banglish text here..."></textarea>
+            </div>
+            <div class="editor-box">
+                <h3>Bengali Text</h3>
+                <textarea id="bengaliText" readonly placeholder="Bengali translation will appear here..."></textarea>
+            </div>
+        </div>
+        <div class="meta-container" style="display: none;">
+            <h3>Generated Title</h3>
+            <p id="generatedTitle"></p>
+            <h3>Generated Caption</h3>
+            <p id="generatedCaption"></p>
+        </div>
+        <button id="convertBtn">Convert to Bengali</button>
+        <button id="exportPdfBtn" style="display: none;">Export as PDF</button>
+    </div>
+
+    <script>
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            const banglishText = document.getElementById('banglishText').value;
+            const bengaliOutput = document.getElementById('bengaliText');
+            const metaContainer = document.querySelector('.meta-container');
+            const exportPdfBtn = document.getElementById('exportPdfBtn');
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: banglishText })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    bengaliOutput.value = data.bengali_text;
+                    document.getElementById('generatedTitle').textContent = data.title;
+                    document.getElementById('generatedCaption').textContent = data.caption;
+                    metaContainer.style.display = 'block';
+                    exportPdfBtn.style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        document.getElementById('exportPdfBtn').addEventListener('click', async () => {
+            const bengaliText = document.getElementById('bengaliText').value;
+            const title = document.getElementById('generatedTitle').textContent;
+            const caption = document.getElementById('generatedCaption').textContent;
+            
+            try {
+                const response = await fetch('/export-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        text: bengaliText,
+                        title: title,
+                        caption: caption
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'bengali_text.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    alert('Error generating PDF');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html> 
