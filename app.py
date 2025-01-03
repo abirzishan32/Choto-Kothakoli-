@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
 import re
+from models.user import User
 
 
 # Load environment variables
@@ -24,7 +26,65 @@ genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
 model = genai.GenerativeModel('gemini-pro')
 
 app = Flask(__name__)
-# banglish_corrector = BanglishCorrector()
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')  # Change this in production
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_by_id(user_id)
+
+# Authentication routes
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        user = User.check_password(email, password)
+        if user:
+            login_user(user)
+            return jsonify({'success': True})
+        
+        return jsonify({
+            'success': False,
+            'error': 'Invalid email or password'
+        })
+    
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        try:
+            user = User(
+                username=data.get('username'),
+                email=data.get('email'),
+                password=data.get('password')
+            ).save()
+            
+            login_user(user)
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return render_template('signup.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 # Create a directory for storing contributions if it doesn't exist
 CONTRIBUTIONS_DIR = Path('contributions')
@@ -295,6 +355,7 @@ def create_pdf(bengali_text, title, caption, font_choice='kalpurush'):
     return buffer
 
 @app.route('/')
+@login_required
 def home():
     return render_template('index.html', fonts=BENGALI_FONTS)
 
