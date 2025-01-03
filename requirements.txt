@@ -9,3 +9,7 @@ pillow
 flask-login==0.6.3
 pymongo==4.6.1
 bcrypt==4.1.2
+flask-wtf==1.2.1
+pyOpenSSL==24.0.0
+asgiref==3.7.2
+hypercorn==0.15.0

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .contribution-list {
+            margin: 20px 0;
+        }
+        
+        .contribution-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .contribution-details {
+            margin-bottom: 15px;
+        }
+        
+        .review-form {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        
+        .review-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .approve-btn {
+            background: #4CAF50;
+        }
+        
+        .reject-btn {
+            background: #f44336;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #FFC107;
+            color: #000;
+        }
+        
+        .status-approved {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .status-rejected {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/analytics">Analytics</a>
+            <a href="/logout">Logout</a>
+        </div>
+        
+        <h2>Pending Contributions</h2>
+        <div class="contribution-list">
+            {% for contribution in contributions %}
+            <div class="contribution-item">
+                <div class="contribution-details">
+                    <span class="status-badge status-{{ contribution.status }}">
+                        {{ contribution.status|title }}
+                    </span>
+                    <h3>Contribution #{{ contribution._id }}</h3>
+                    <p><strong>Banglish:</strong> {{ contribution.banglish }}</p>
+                    <p><strong>Bengali:</strong> {{ contribution.bengali }}</p>
+                    <p><strong>Feedback:</strong> {{ contribution.feedback or 'None' }}</p>
+                    <p><strong>Submitted:</strong> {{ contribution.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                </div>
+                
+                {% if contribution.status == 'pending' %}
+                <div class="review-form">
+                    <textarea id="comment-{{ contribution._id }}" 
+                            placeholder="Add review comment (optional)"
+                            class="form-control"></textarea>
+                    <div class="review-buttons">
+                        <button class="approve-btn"
+                                onclick="reviewContribution('{{ contribution._id }}', 'approve')">
+                            Approve
+                        </button>
+                        <button class="reject-btn"
+                                onclick="reviewContribution('{{ contribution._id }}', 'reject')">
+                            Reject
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function reviewContribution(id, action) {
+            const comment = document.getElementById(`comment-${id}`).value;
+            
+            try {
+                const response = await fetch('/admin/review-contribution', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contribution_id: id,
+                        action: action,
+                        comment: comment
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Reload page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html> 

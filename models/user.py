@@ -9,6 +9,20 @@ class User(UserMixin):
         self.email = email
         self.password = password
         self._id = _id
+        self._is_active = True
+        self.role = 'user'
+        self.last_login = None
+        self.login_attempts = 0
+        self.locked_until = None
+
+    def is_admin(self):
+        return self.role == 'admin'
+
+    @staticmethod
+    def create_admin(username, email, password):
+        user = User(username, email, password)
+        user.role = 'admin'
+        return user.save()
 
     @staticmethod
     def get_by_id(user_id):

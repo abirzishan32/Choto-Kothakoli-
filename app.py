@@ -1,8 +1,13 @@
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from asgiref.wsgi import WsgiToAsgi
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
+import asyncio
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
+
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -24,6 +29,8 @@ load_dotenv()
 # Configure Gemini API
 genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
 model = genai.GenerativeModel('gemini-pro')
+
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key')  # Change this in production
@@ -524,5 +531,79 @@ def get_analytics_data():
         'avg_length': round(filtered_data['avg_length'], 2)
     })
 
+def process_chat_message(message):
+    """Process chat messages and return response in Bengali"""
+    
+    # Detect if the message is in Banglish
+    is_banglish = all(ord(char) < 128 for char in message)
+    
+    if is_banglish:
+        # First convert Banglish to Bengali
+        result = convert_to_bengali(message)
+        bengali_query = result['bengali_text']
+    else:
+        bengali_query = message
+    
+    # Improved prompt with more context and examples
+    prompt = f"""You are a helpful and friendly Bengali language chatbot. Respond naturally to the following query in Bengali script. Maintain a conversational tone and provide relevant responses based on the query context.
+
+Query: {bengali_query}
+
+Rules:
+1. Always respond in Bengali script (not Banglish)
+2. Keep responses natural and contextual
+3. Don't default to asking if help is needed
+4. Be friendly and engaging
+5. If you don't understand the query, ask for clarification in Bengali
+6. If the query is not in Bengali or Banglish, respond with a Bengali message asking them to use Bengali or Banglish
+
+Example conversations:
+- Query: "tomar nam ki?" → Response: "আমার নাম AI বন্ধু। আপনার সাথে কথা বলতে পেরে আমি খুশি।"
+- Query: "ghum ashe" → Response: "হ্যাঁ, ঘুম আসলে একটু বিশ্রাম নেওয়া উচিত। আপনি কি এখন বিশ্রাম নিতে যাচ্ছেন?"
+- Query: "gemini tumi bangla paro?" → Response: "হ্যাঁ, আমি বাংলায় কথা বলতে পারি। আপনার সাথে বাংলায় যেকোনো বিষয়ে আলোচনা করতে পারি।"
+- Query: "ajke baire bristi" → Response: "হ্যাঁ, বৃষ্টির দিনে বাইরে যাওয়ার সময় সাবধান থাকবেন। ছাতা নিয়ে যাবেন।"
+- Query: "tumi ki koro?" → Response: "আমি একটি AI চ্যাটবট, যে বাংলা ভাষায় মানুষের সাথে কথা বলে এবং তাদের বিভিন্ন বিষয়ে সাহায্য করে।"
+
+Remember to respond naturally and contextually to the specific query: {bengali_query}"""
+
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
+@app.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        
+        if not message:
+            return jsonify({
+                'success': False,
+                'error': 'Message is required'
+            })
+        
+        response = process_chat_message(message)
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/chat')
+@login_required
+def chat_page():
+    return render_template('chat.html')
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    config = Config()
+    config.bind = ["localhost:5000"]
+    config.use_reloader = True
+    asgi_app = WsgiToAsgi(app)
+    asyncio.run(serve(asgi_app, config))
